@@ -17,14 +17,14 @@ pub struct CPU {
     syscall: bool,
 }
 impl CPU {
-    pub fn new() -> CPU {
+    pub fn new(start_pc: u16, start_sp: u16) -> CPU {
         let mut cpu = CPU {
             i: 0,
             regs: Registers::default(),
             syscall: false,
         };
-        cpu.regs.pc = 0x100;
-        cpu.regs.sp = u16::MAX;
+        cpu.regs.pc = start_pc;
+        cpu.regs.sp = start_sp;
         cpu
     }
     pub fn get_regs(&self) -> Registers {
