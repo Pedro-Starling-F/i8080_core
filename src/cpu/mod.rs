@@ -1,6 +1,6 @@
 pub mod regs;
 #[cfg(feature = "log")]
-use log::{error, trace};
+use log::{debug, error};
 use regs::Registers;
 
 #[cfg(feature = "symlog")]
@@ -14,15 +14,15 @@ macro_rules! getLsb {
 pub struct CPU {
     i: u8,
     regs: Registers,
-    io:[u8; 0x100]
+    io: [u8; 0x100],
 }
 impl CPU {
     pub fn new(start_pc: u16, start_sp: u16) -> CPU {
         let mut cpu = CPU {
             i: 0,
             regs: Registers::default(),
-            io: [0; 0x100]
-        }; 
+            io: [0; 0x100],
+        };
         cpu.regs.pc = start_pc;
         cpu.regs.sp = start_sp;
         cpu
@@ -45,7 +45,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(PC);
         #[cfg(feature = "log")]
-        trace!("PC: {:04X} ", self.regs.pc);
+        debug!("PC: {:04X} ", self.regs.pc);
         #[cfg(feature = "std")]
         print!("PC: {:04X} ", self.regs.pc);
         self.i = mem[self.regs.pc as usize];
@@ -53,7 +53,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(REGS);
         #[cfg(feature = "log")]
-        trace!("{:X?}\n", self.regs);
+        debug!("{:X?}\n", self.regs);
         #[cfg(feature = "std")]
         print!("{:X?}\n", self.regs);
     }
@@ -63,7 +63,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(JMP);
         #[cfg(feature = "log")]
-        trace!("JMP {:04X}", addr);
+        debug!("JMP {:04X}", addr);
     }
     fn lxi(&mut self, mem: &mut [u8]) {
         let val = self.get_16(mem);
@@ -72,7 +72,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(LXI);
         #[cfg(feature = "log")]
-        trace!("LXI {:04X}", val);
+        debug!("LXI {:04X}", val);
     }
     fn ani(&mut self, mem: &mut [u8]) {
         let db = mem[self.regs.pc as usize + 1];
@@ -82,7 +82,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ANI);
         #[cfg(feature = "log")]
-        trace!("ANI {:02X}", db);
+        debug!("ANI {:02X}", db);
     }
     fn jccc(&mut self, mem: &mut [u8]) {
         let mut addr = 0;
@@ -95,7 +95,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(Jccc);
         #[cfg(feature = "log")]
-        trace!("Jccc {:04X}", addr);
+        debug!("Jccc {:04X}", addr);
     }
     fn adi(&mut self, mem: &mut [u8]) {
         let db = mem[self.regs.pc as usize + 1];
@@ -107,7 +107,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ADI);
         #[cfg(feature = "log")]
-        trace!("ADI {:02X}", db);
+        debug!("ADI {:02X}", db);
     }
     fn call(&mut self, mem: &mut [u8]) {
         mem[self.regs.sp as usize - 1] = (self.regs.pc >> 8) as u8;
@@ -118,7 +118,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(CALL);
         #[cfg(feature = "log")]
-        trace!("CALL {:04X}", addr);
+        debug!("CALL {:04X}", addr);
     }
     fn push(&mut self, mem: &mut [u8]) {
         let rp = self.regs.get_rp(self.i);
@@ -129,7 +129,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(PUSH);
         #[cfg(feature = "log")]
-        trace!("PUSH {:04X}", rp)
+        debug!("PUSH {:04X}", rp)
     }
     fn xchg(&mut self, _mem: &mut [u8]) {
         let hl = self.regs.get_rp(0x20);
@@ -140,7 +140,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(XCHG);
         #[cfg(feature = "log")]
-        trace!("XCHG {:04X}", de);
+        debug!("XCHG {:04X}", de);
     }
     fn mvi(&mut self, mem: &mut [u8]) {
         self.regs.set_d(self.i, mem, mem[self.regs.pc as usize + 1]);
@@ -148,14 +148,14 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(MVI);
         #[cfg(feature = "log")]
-        trace!("MVI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("MVI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn nop(&mut self, _mem: &mut [u8]) {
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(NOP);
         #[cfg(feature = "log")]
-        trace!("NOP {:04X}", self.regs.pc);
+        debug!("NOP {:04X}", self.regs.pc);
     }
     fn fault(&mut self, _mem: &mut [u8]) {
         #[cfg(feature = "log")]
@@ -171,7 +171,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(MOV);
         #[cfg(feature = "log")]
-        trace!("MOV {:02X}", s);
+        debug!("MOV {:02X}", s);
     }
     fn lda(&mut self, mem: &mut [u8]) {
         let addr = self.get_16(mem);
@@ -180,7 +180,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(LDA);
         #[cfg(feature = "log")]
-        trace!("LDA {:04X}", addr);
+        debug!("LDA {:04X}", addr);
     }
     fn sda(&mut self, mem: &mut [u8]) {
         let addr = self.get_16(mem);
@@ -189,7 +189,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SDA);
         #[cfg(feature = "log")]
-        trace!("SDA {:04X}", addr);
+        debug!("SDA {:04X}", addr);
     }
     fn lhld(&mut self, mem: &mut [u8]) {
         let addr = self.get_16(mem) as usize;
@@ -199,7 +199,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(LHLD);
         #[cfg(feature = "log")]
-        trace!("LHLD {:04X}", val);
+        debug!("LHLD {:04X}", val);
     }
     fn shld(&mut self, mem: &mut [u8]) {
         let addr = self.get_16(mem) as usize;
@@ -210,7 +210,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SHLD);
         #[cfg(feature = "log")]
-        trace!("SHLD {:04X}", val);
+        debug!("SHLD {:04X}", val);
     }
     fn ldax(&mut self, mem: &mut [u8]) {
         let rp = self.regs.get_rp(self.i);
@@ -219,7 +219,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(LDAX);
         #[cfg(feature = "log")]
-        trace!("LDAX {:04X}", rp);
+        debug!("LDAX {:04X}", rp);
     }
     fn stax(&mut self, mem: &mut [u8]) {
         let rp = self.regs.get_rp(self.i);
@@ -228,7 +228,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(STAX);
         #[cfg(feature = "log")]
-        trace!("STAX {:04X}", rp);
+        debug!("STAX {:04X}", rp);
     }
     fn add(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -240,7 +240,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ADD);
         #[cfg(feature = "log")]
-        trace!("ADD {:02X}", s);
+        debug!("ADD {:02X}", s);
     }
     fn adc(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -253,7 +253,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ADC);
         #[cfg(feature = "log")]
-        trace!("ADC {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("ADC {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn aci(&mut self, mem: &mut [u8]) {
         let s = mem[self.regs.pc as usize + 1];
@@ -266,7 +266,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ACI);
         #[cfg(feature = "log")]
-        trace!("ACI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("ACI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn sub(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -278,7 +278,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SUB);
         #[cfg(feature = "log")]
-        trace!("SUB {:02X}", s);
+        debug!("SUB {:02X}", s);
     }
     fn sui(&mut self, mem: &mut [u8]) {
         let s = mem[self.regs.pc as usize + 1];
@@ -290,7 +290,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SUI);
         #[cfg(feature = "log")]
-        trace!("SUI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("SUI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn sbb(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -307,7 +307,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SBB);
         #[cfg(feature = "log")]
-        trace!("SBB {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("SBB {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn sbi(&mut self, mem: &mut [u8]) {
         let s = mem[self.regs.pc as usize + 1];
@@ -324,7 +324,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SBI);
         #[cfg(feature = "log")]
-        trace!("SBI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("SBI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn inr(&mut self, mem: &mut [u8]) {
         let r = self.regs.get_d(self.i, mem);
@@ -336,7 +336,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(INR);
         #[cfg(feature = "log")]
-        trace!("INR {:02X}", r);
+        debug!("INR {:02X}", r);
     }
     fn dcr(&mut self, mem: &mut [u8]) {
         let r = self.regs.get_d(self.i, mem);
@@ -348,7 +348,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(DCR);
         #[cfg(feature = "log")]
-        trace!("DCR {:02X}", r);
+        debug!("DCR {:02X}", r);
     }
     fn inx(&mut self, _mem: &mut [u8]) {
         let rp = self.regs.get_rp(self.i);
@@ -357,7 +357,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(INX);
         #[cfg(feature = "log")]
-        trace!("INX {:02x}", rp);
+        debug!("INX {:02x}", rp);
     }
     fn dcx(&mut self, _mem: &mut [u8]) {
         let rp = self.regs.get_rp(self.i);
@@ -366,7 +366,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(DCX);
         #[cfg(feature = "log")]
-        trace!("DCX {:02x}", rp);
+        debug!("DCX {:02x}", rp);
     }
     fn dad(&mut self, _mem: &mut [u8]) {
         let rp = self.regs.get_rp(self.i);
@@ -378,7 +378,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(DAD);
         #[cfg(feature = "log")]
-        trace!("DAD {:04x}", hl);
+        debug!("DAD {:04x}", hl);
     }
     fn daa(&mut self, _mem: &mut [u8]) {
         #[cfg(feature = "log")]
@@ -392,7 +392,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ANA);
         #[cfg(feature = "log")]
-        trace!("ANA {:02X}", s);
+        debug!("ANA {:02X}", s);
     }
     fn ora(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -402,7 +402,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ORA);
         #[cfg(feature = "log")]
-        trace!("ORA {:02X}", s);
+        debug!("ORA {:02X}", s);
     }
     fn ori(&mut self, mem: &mut [u8]) {
         self.regs.a |= mem[self.regs.pc as usize + 1];
@@ -411,7 +411,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(ORI);
         #[cfg(feature = "log")]
-        trace!("ORI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("ORI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn xra(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -421,7 +421,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(XRA);
         #[cfg(feature = "log")]
-        trace!("XRA {:02X}", s);
+        debug!("XRA {:02X}", s);
     }
     fn xri(&mut self, mem: &mut [u8]) {
         self.regs.a ^= mem[self.regs.pc as usize + 1];
@@ -430,7 +430,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(XRI);
         #[cfg(feature = "log")]
-        trace!("XRI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("XRI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn cmp(&mut self, mem: &mut [u8]) {
         let s = self.regs.get_s(self.i, mem);
@@ -441,7 +441,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(CMP);
         #[cfg(feature = "log")]
-        trace!("CMP {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("CMP {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn cpi(&mut self, mem: &mut [u8]) {
         let s = mem[self.regs.pc as usize + 1];
@@ -452,7 +452,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(CPI);
         #[cfg(feature = "log")]
-        trace!("CPI {:02X}", mem[self.regs.pc as usize + 1]);
+        debug!("CPI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn rlc(&mut self, _mem: &mut [u8]) {
         let (a, c) = self.regs.a.overflowing_mul(2);
@@ -462,7 +462,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(RLC);
         #[cfg(feature = "log")]
-        trace!("RLC {:02x}", a);
+        debug!("RLC {:02x}", a);
     }
     fn rrc(&mut self, _mem: &mut [u8]) {
         let a = self.regs.a.rotate_right(1);
@@ -472,7 +472,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(RRC);
         #[cfg(feature = "log")]
-        trace!("RRC {:02x}", a);
+        debug!("RRC {:02x}", a);
     }
     fn ral(&mut self, _mem: &mut [u8]) {
         let (a, c) = self.regs.a.overflowing_mul(2);
@@ -482,7 +482,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(RAL);
         #[cfg(feature = "log")]
-        trace!("RAL {:02x}", a);
+        debug!("RAL {:02x}", a);
     }
     fn rar(&mut self, _mem: &mut [u8]) {
         self.regs.f.set_carry(self.regs.a & 1 == 1);
@@ -492,7 +492,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(RAR);
         #[cfg(feature = "log")]
-        trace!("RAL {:02x}", a);
+        debug!("RAL {:02x}", a);
     }
     fn cma(&mut self, _mem: &mut [u8]) {
         self.regs.a = !self.regs.a;
@@ -500,7 +500,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(CMA);
         #[cfg(feature = "log")]
-        trace!("CMA {:02x}", self.regs.a);
+        debug!("CMA {:02x}", self.regs.a);
     }
     fn cmc(&mut self, _mem: &mut [u8]) {
         let c = !self.regs.f.get_carry();
@@ -509,7 +509,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(CMC);
         #[cfg(feature = "log")]
-        trace!("CMC {}", self.regs.f.get_carry());
+        debug!("CMC {}", self.regs.f.get_carry());
     }
     fn stc(&mut self, _mem: &mut [u8]) {
         self.regs.f.set_carry(true);
@@ -517,7 +517,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(STC);
         #[cfg(feature = "log")]
-        trace!("STC");
+        debug!("STC");
     }
     fn c_ccc(&mut self, mem: &mut [u8]) {
         let mut addr = 0;
@@ -533,7 +533,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(Cccc);
         #[cfg(feature = "log")]
-        trace!("Cccc {:04X}", addr);
+        debug!("Cccc {:04X}", addr);
     }
     pub fn ret(&mut self, mem: &mut [u8]) {
         let addr = self.pop_16(mem);
@@ -541,7 +541,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(RET);
         #[cfg(feature = "log")]
-        trace!("RET {:04X}", addr);
+        debug!("RET {:04X}", addr);
     }
     fn r_ccc(&mut self, mem: &mut [u8]) {
         let mut addr = 0;
@@ -554,17 +554,22 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(Rccc);
         #[cfg(feature = "log")]
-        trace!("Rccc {:04X}", addr);
+        debug!("Rccc {:04X}", addr);
     }
-    fn rst(&mut self, _mem: &mut [u8]) {
+    fn rst(&mut self, mem: &mut [u8]) {
+        mem[self.regs.sp as usize - 1] = (self.regs.pc >> 8) as u8;
+        mem[self.regs.sp as usize - 2] = self.regs.pc as u8;
+        self.regs.sp -= 2;
+        let addr = self.i & 0b00111000;
+        self.regs.pc = addr as u16;
         #[cfg(feature = "log")]
-        error!("")
+        debug!("RST {:02X}", addr);
     }
     fn pchl(&mut self, _mem: &mut [u8]) {
         #[cfg(feature = "symlog")]
         log!(PCHL);
         #[cfg(feature = "log")]
-        trace!("PCHL {:04x}", self.regs.pc);
+        debug!("PCHL {:04x}", self.regs.pc);
         self.regs.pc = self.regs.get_rp(0x20);
     }
     fn pop(&mut self, mem: &mut [u8]) {
@@ -574,7 +579,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(POP);
         #[cfg(feature = "log")]
-        trace!("POP {:04x}", val);
+        debug!("POP {:04x}", val);
     }
     fn xthl(&mut self, mem: &mut [u8]) {
         let l = self.regs.l;
@@ -587,7 +592,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(XTHL);
         #[cfg(feature = "log")]
-        trace!("XTHL {:04x}", self.regs.get_rp(0x20));
+        debug!("XTHL {:04x}", self.regs.get_rp(0x20));
     }
     fn sphl(&mut self, _mem: &mut [u8]) {
         self.regs.sp = self.regs.get_rp(0x20);
@@ -595,7 +600,7 @@ impl CPU {
         #[cfg(feature = "symlog")]
         log!(SPHL);
         #[cfg(feature = "log")]
-        trace!("SPHL {:04x}", self.regs.get_rp(0x20));
+        debug!("SPHL {:04x}", self.regs.get_rp(0x20));
     }
     fn r#in(&mut self, _mem: &mut [u8]) {
         #[cfg(feature = "log")]
@@ -618,7 +623,7 @@ impl CPU {
         error!("HLT")
     }
 }
-const INDEX: [(&str, fn(&mut CPU, &mut [u8])); 58] = [
+const INDEX: [(&str, fn(&mut CPU, &mut [u8])); 57] = [
     ("01DDDSSS", CPU::mov),
     ("00DDD110", CPU::mvi),
     ("00RP0001", CPU::lxi),
@@ -685,7 +690,7 @@ const fn recursive(
     val: fn(&mut CPU, &mut [u8]),
 ) {
     if xmask == 0 {
-        //trace!("kmask:{:03X}", kmask);
+        //debug!("kmask:{:03X}", kmask);
         lut[kmask as usize] = val;
     } else {
         let xmask_lsb = getLsb!(xmask);
