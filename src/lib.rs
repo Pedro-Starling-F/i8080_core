@@ -1,4 +1,4 @@
 #![feature(const_mut_refs)]
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 pub mod cpu;

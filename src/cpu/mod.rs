@@ -14,15 +14,15 @@ macro_rules! getLsb {
 pub struct CPU {
     i: u8,
     regs: Registers,
-    syscall: bool,
+    io:[u8; 0x100]
 }
 impl CPU {
     pub fn new(start_pc: u16, start_sp: u16) -> CPU {
         let mut cpu = CPU {
             i: 0,
             regs: Registers::default(),
-            syscall: false,
-        };
+            io: [0; 0x100]
+        }; 
         cpu.regs.pc = start_pc;
         cpu.regs.sp = start_sp;
         cpu
@@ -46,12 +46,16 @@ impl CPU {
         log!(PC);
         #[cfg(feature = "log")]
         trace!("PC: {:04X} ", self.regs.pc);
+        #[cfg(feature = "std")]
+        print!("PC: {:04X} ", self.regs.pc);
         self.i = mem[self.regs.pc as usize];
         LUT[self.i as usize](self, mem);
         #[cfg(feature = "symlog")]
         log!(REGS);
         #[cfg(feature = "log")]
         trace!("{:X?}\n", self.regs);
+        #[cfg(feature = "std")]
+        print!("{:X?}\n", self.regs);
     }
     fn jmp(&mut self, mem: &mut [u8]) {
         let addr = self.get_16(mem);

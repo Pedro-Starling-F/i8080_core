@@ -7,9 +7,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 log = {version = "0.4.17", default-features = false, optional = true}
-symlog = {path = "../symlog", optional = true}
+symlog = {path = "./symlog", optional = true}
 
 [features]
+default = ["std"]
+std = []
 symlog = [
     "dep:symlog"
 ]
