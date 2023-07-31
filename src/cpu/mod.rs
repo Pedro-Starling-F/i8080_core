@@ -27,6 +27,12 @@ impl CPU {
         cpu.regs.sp = start_sp;
         cpu
     }
+    pub fn get_io_n(&self, n: u8) -> u8 {
+        self.io[n as usize]
+    }
+    pub fn set_io_n(&mut self, n: u8, value: u8) {
+
+    }
     pub fn get_regs(&self) -> Registers {
         self.regs
     }
