@@ -1,5 +1,5 @@
 pub mod regs;
-use core::panic;
+use core::{panic, fmt::LowerExp};
 
 #[cfg(feature = "log")]
 use log::{debug, error, trace};
@@ -390,7 +390,22 @@ impl CPU {
         #[cfg(feature = "log")]
         debug!("DAD {:04x}", hl);
     }
-    fn daa(&mut self, _mem: &mut [u8]) {
+    fn daa(&mut self, mem: &mut [u8]) {
+        let mut acc = self.regs.a;
+        let mut low_nib = (acc & 0x0F) as u8;
+        let mut set_aux = false;
+        if low_nib > 9 || self.get_regs().f.get_aux(){
+            low_nib += 6;
+            self.regs.f.set_aux(low_nib > 0x0F);
+            acc += 6;
+        }
+        let mut up_nib = acc & 0xF0;
+        if up_nib > 0x90 || self.get_regs().f.get_carry(){
+            let (a, v) = acc.overflowing_add(0x60);
+            self.regs.f.set_carry(v);
+            acc = a
+        }
+        self.regs.set_s(7, mem, acc);
         #[cfg(feature = "log")]
         error!("DAA");
         //panic!("DAA at addr {:02X}", self.regs.pc);
