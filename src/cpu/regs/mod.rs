@@ -65,7 +65,7 @@ impl Registers{
             3 => self.e = val,
             4 => self.h = val,
             5 => self.l = val,
-            6 => mem[self.get_rp(0x20) as usize] = val,
+            6 => mem[self.get_rp(0x20) as usize % 0x4000] = val,
             7 => self.a = val,
             _ => {}
         };
@@ -78,7 +78,7 @@ impl Registers{
             3 => self.e,
             4 => self.h,
             5 => self.l,
-            6 => mem[self.get_rp(0x20) as usize],
+            6 => mem[self.get_rp(0x20) as usize % 0x4000],
             7 => self.a,
             _ =>  {panic!()}
         }

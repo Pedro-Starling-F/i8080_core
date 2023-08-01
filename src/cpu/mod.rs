@@ -1,6 +1,8 @@
 pub mod regs;
+use core::panic;
+
 #[cfg(feature = "log")]
-use log::{debug, error};
+use log::{debug, error, trace};
 use regs::Registers;
 
 #[cfg(feature = "symlog")]
@@ -12,26 +14,27 @@ macro_rules! getLsb {
     };
 }
 pub struct CPU {
-    i: u8,
+    pub instruction: u8,
     regs: Registers,
-    io: [u8; 0x100],
+    input: [u8; 0x100],
+    pub out_strobe:(bool, u8, u8),
+    pub interrupt_enabled:bool,
 }
 impl CPU {
     pub fn new(start_pc: u16, start_sp: u16) -> CPU {
         let mut cpu = CPU {
-            i: 0,
+            instruction: 0,
             regs: Registers::default(),
-            io: [0; 0x100],
+            input: [0x00; 0x100],
+            out_strobe:(false, 0, 0),
+            interrupt_enabled:false
         };
         cpu.regs.pc = start_pc;
         cpu.regs.sp = start_sp;
         cpu
     }
-    pub fn get_io_n(&self, n: u8) -> u8 {
-        self.io[n as usize]
-    }
-    pub fn set_io_n(&mut self, n: u8, value: u8) {
-
+    pub fn set_input_n(&mut self, n: u8, value: u8) {
+        self.input[n as usize] = value;
     }
     pub fn get_regs(&self) -> Registers {
         self.regs
@@ -54,12 +57,12 @@ impl CPU {
         debug!("PC: {:04X} ", self.regs.pc);
         #[cfg(feature = "std")]
         print!("PC: {:04X} ", self.regs.pc);
-        self.i = mem[self.regs.pc as usize];
-        LUT[self.i as usize](self, mem);
+        self.instruction = mem[self.regs.pc as usize];
+        LUT[self.instruction as usize](self, mem);
         #[cfg(feature = "symlog")]
         log!(REGS);
         #[cfg(feature = "log")]
-        debug!("{:X?}\n", self.regs);
+        trace!("{:X?}, {:X?}\n",self.instruction, self.regs);
         #[cfg(feature = "std")]
         print!("{:X?}\n", self.regs);
     }
@@ -73,7 +76,7 @@ impl CPU {
     }
     fn lxi(&mut self, mem: &mut [u8]) {
         let val = self.get_16(mem);
-        self.regs.set_rp(val, self.i);
+        self.regs.set_rp(val, self.instruction);
         self.regs.pc += 3;
         #[cfg(feature = "symlog")]
         log!(LXI);
@@ -92,7 +95,7 @@ impl CPU {
     }
     fn jccc(&mut self, mem: &mut [u8]) {
         let mut addr = 0;
-        if self.regs.cond(self.i) {
+        if self.regs.cond(self.instruction) {
             addr = self.get_16(mem);
             self.regs.pc = addr;
         } else {
@@ -127,7 +130,7 @@ impl CPU {
         debug!("CALL {:04X}", addr);
     }
     fn push(&mut self, mem: &mut [u8]) {
-        let rp = self.regs.get_rp(self.i);
+        let rp = self.regs.get_rp(self.instruction);
         mem[self.regs.sp as usize - 1] = (rp >> 8) as u8;
         mem[self.regs.sp as usize - 2] = rp as u8;
         self.regs.sp -= 2;
@@ -149,7 +152,7 @@ impl CPU {
         debug!("XCHG {:04X}", de);
     }
     fn mvi(&mut self, mem: &mut [u8]) {
-        self.regs.set_d(self.i, mem, mem[self.regs.pc as usize + 1]);
+        self.regs.set_d(self.instruction, mem, mem[self.regs.pc as usize + 1]);
         self.regs.pc += 2;
         #[cfg(feature = "symlog")]
         log!(MVI);
@@ -167,12 +170,13 @@ impl CPU {
         #[cfg(feature = "log")]
         error!(
             "regs:{:x?}, instr:{:08b}, {:02x}",
-            self.regs, self.i, self.i
-        )
+            self.regs, self.instruction, self.instruction
+        );
+        panic!("FAULT");
     }
     fn mov(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
-        self.regs.set_d(self.i, mem, s);
+        let s = self.regs.get_s(self.instruction, mem);
+        self.regs.set_d(self.instruction, mem, s);
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(MOV);
@@ -219,7 +223,7 @@ impl CPU {
         debug!("SHLD {:04X}", val);
     }
     fn ldax(&mut self, mem: &mut [u8]) {
-        let rp = self.regs.get_rp(self.i);
+        let rp = self.regs.get_rp(self.instruction);
         self.regs.a = mem[rp as usize];
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
@@ -228,7 +232,7 @@ impl CPU {
         debug!("LDAX {:04X}", rp);
     }
     fn stax(&mut self, mem: &mut [u8]) {
-        let rp = self.regs.get_rp(self.i);
+        let rp = self.regs.get_rp(self.instruction);
         mem[rp as usize] = self.regs.a;
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
@@ -237,7 +241,7 @@ impl CPU {
         debug!("STAX {:04X}", rp);
     }
     fn add(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         let (a, v) = self.regs.a.overflowing_add(s);
         let h = ((self.regs.a & 0xF) + (s & 0xF)) & 0x10 == 0x10;
         self.regs.set_flags(a, v, h);
@@ -249,7 +253,7 @@ impl CPU {
         debug!("ADD {:02X}", s);
     }
     fn adc(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         let (a0, v0) = self.regs.a.overflowing_add(s);
         let (a1, v1) = a0.overflowing_add(self.regs.f.get_carry() as u8);
         let h = ((self.regs.a & 0xF) + (s & 0xF) + self.regs.f.get_carry() as u8) & 0x10 == 0x10;
@@ -275,7 +279,7 @@ impl CPU {
         debug!("ACI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn sub(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         let (a, v) = self.regs.a.overflowing_sub(s);
         let h = (self.regs.a & 0xF).wrapping_sub(s & 0xF) & 0x10 == 0x10;
         self.regs.set_flags(a, v, h);
@@ -299,7 +303,7 @@ impl CPU {
         debug!("SUI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn sbb(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         let (a0, v0) = self.regs.a.overflowing_sub(s);
         let (a1, v1) = a0.overflowing_sub(self.regs.f.get_carry() as u8);
         let h = (self.regs.a & 0xF)
@@ -333,11 +337,11 @@ impl CPU {
         debug!("SBI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn inr(&mut self, mem: &mut [u8]) {
-        let r = self.regs.get_d(self.i, mem);
+        let r = self.regs.get_d(self.instruction, mem);
         let i = r.wrapping_add(1);
         let h = ((r & 0xF) + 1) & 0x10 == 0x10;
-        self.regs.set_d(self.i, mem, i);
-        self.regs.set_flags(r, false, h);
+        self.regs.set_d(self.instruction, mem, i);
+        self.regs.set_flags(i, false, h);
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(INR);
@@ -345,20 +349,20 @@ impl CPU {
         debug!("INR {:02X}", r);
     }
     fn dcr(&mut self, mem: &mut [u8]) {
-        let r = self.regs.get_d(self.i, mem);
+        let r = self.regs.get_d(self.instruction, mem);
         let i = r.wrapping_sub(1);
         let h = ((r & 0xF).wrapping_sub(1)) & 0x10 == 0x10;
-        self.regs.set_d(self.i, mem, i);
-        self.regs.set_flags(r, false, h);
+        self.regs.set_d(self.instruction, mem, i);
+        self.regs.set_flags(i, false, h);
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(DCR);
         #[cfg(feature = "log")]
-        debug!("DCR {:02X}", r);
+        debug!("DCR {:02X}", i);
     }
     fn inx(&mut self, _mem: &mut [u8]) {
-        let rp = self.regs.get_rp(self.i);
-        self.regs.set_rp(rp.wrapping_add(1), self.i);
+        let rp = self.regs.get_rp(self.instruction);
+        self.regs.set_rp(rp.wrapping_add(1), self.instruction);
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(INX);
@@ -366,8 +370,8 @@ impl CPU {
         debug!("INX {:02x}", rp);
     }
     fn dcx(&mut self, _mem: &mut [u8]) {
-        let rp = self.regs.get_rp(self.i);
-        self.regs.set_rp(rp.wrapping_sub(1), self.i);
+        let rp = self.regs.get_rp(self.instruction);
+        self.regs.set_rp(rp.wrapping_sub(1), self.instruction);
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(DCX);
@@ -375,7 +379,7 @@ impl CPU {
         debug!("DCX {:02x}", rp);
     }
     fn dad(&mut self, _mem: &mut [u8]) {
-        let rp = self.regs.get_rp(self.i);
+        let rp = self.regs.get_rp(self.instruction);
         let hl = self.regs.get_rp(0x20);
         let (hl, v) = hl.overflowing_add(rp);
         self.regs.set_rp(hl, 0x20);
@@ -389,9 +393,10 @@ impl CPU {
     fn daa(&mut self, _mem: &mut [u8]) {
         #[cfg(feature = "log")]
         error!("DAA");
+        //panic!("DAA at addr {:02X}", self.regs.pc);
     }
     fn ana(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         self.regs.a &= s;
         self.regs.set_flags(self.regs.a, false, false);
         self.regs.pc += 1;
@@ -401,7 +406,7 @@ impl CPU {
         debug!("ANA {:02X}", s);
     }
     fn ora(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         self.regs.a |= s;
         self.regs.set_flags(self.regs.a, false, false);
         self.regs.pc += 1;
@@ -420,7 +425,7 @@ impl CPU {
         debug!("ORI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn xra(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         self.regs.a ^= s;
         self.regs.set_flags(self.regs.a, false, false);
         self.regs.pc += 1;
@@ -439,7 +444,7 @@ impl CPU {
         debug!("XRI {:02X}", mem[self.regs.pc as usize + 1]);
     }
     fn cmp(&mut self, mem: &mut [u8]) {
-        let s = self.regs.get_s(self.i, mem);
+        let s = self.regs.get_s(self.instruction, mem);
         let h = (self.regs.a & 0xF).wrapping_sub(s) & 0x10 == 0x10;
         let (a, v) = self.regs.a.overflowing_sub(s);
         self.regs.set_flags(a, v, h);
@@ -527,7 +532,7 @@ impl CPU {
     }
     fn c_ccc(&mut self, mem: &mut [u8]) {
         let mut addr = 0;
-        if self.regs.cond(self.i) {
+        if self.regs.cond(self.instruction) {
             mem[self.regs.sp as usize - 1] = (self.regs.pc >> 8) as u8;
             mem[self.regs.sp as usize - 2] = self.regs.pc as u8;
             self.regs.sp -= 2;
@@ -551,7 +556,7 @@ impl CPU {
     }
     fn r_ccc(&mut self, mem: &mut [u8]) {
         let mut addr = 0;
-        if self.regs.cond(self.i) {
+        if self.regs.cond(self.instruction) {
             addr = self.pop_16(mem);
             self.regs.pc = addr + 3;
         } else {
@@ -562,11 +567,11 @@ impl CPU {
         #[cfg(feature = "log")]
         debug!("Rccc {:04X}", addr);
     }
-    fn rst(&mut self, mem: &mut [u8]) {
+    pub fn rst(&mut self, mem: &mut [u8]) {
         mem[self.regs.sp as usize - 1] = (self.regs.pc >> 8) as u8;
         mem[self.regs.sp as usize - 2] = self.regs.pc as u8;
         self.regs.sp -= 2;
-        let addr = self.i & 0b00111000;
+        let addr = self.instruction & 0b00111000;
         self.regs.pc = addr as u16;
         #[cfg(feature = "log")]
         debug!("RST {:02X}", addr);
@@ -580,7 +585,7 @@ impl CPU {
     }
     fn pop(&mut self, mem: &mut [u8]) {
         let val = self.pop_16(mem);
-        self.regs.set_rp(val, self.i);
+        self.regs.set_rp(val, self.instruction);
         self.regs.pc += 1;
         #[cfg(feature = "symlog")]
         log!(POP);
@@ -608,25 +613,47 @@ impl CPU {
         #[cfg(feature = "log")]
         debug!("SPHL {:04x}", self.regs.get_rp(0x20));
     }
-    fn r#in(&mut self, _mem: &mut [u8]) {
+    fn r#in(&mut self, mem: &mut [u8]) {
+        let addr = mem[self.regs.pc as usize+1];
+        let acc = self.input[addr as usize];
+        self.regs.set_s(7, mem, acc);
+        self.regs.pc +=2;
         #[cfg(feature = "log")]
-        error!("IN")
+        error!("IN {:02X}",acc);
+        #[cfg(feature = "std")]
+        panic!("IN at addr {:02X}", addr);
     }
-    fn out(&mut self, _mem: &mut [u8]) {
+    fn out(&mut self, mem: &mut [u8]) {
+        let acc = self.regs.a;
+        let addr = mem[self.regs.pc as usize+1];
+        self.out_strobe = (true, addr, acc); 
+        self.regs.pc +=2;
+        #[cfg(feature = "symlog")]
+        log!(OUT);
         #[cfg(feature = "log")]
-        error!("OUT")
+        debug!("OUT {:02X}", acc);
     }
     fn ei(&mut self, _mem: &mut [u8]) {
+        self.interrupt_enabled = true;
+        self.regs.pc+=1;
         #[cfg(feature = "log")]
-        error!("EI")
+        debug!("EI");
+        #[cfg(feature = "std")]
+        panic!("EI at addr {:04X}", self.regs.pc);
     }
     fn di(&mut self, _mem: &mut [u8]) {
+        self.interrupt_enabled = false;
+        self.regs.pc+=1;
         #[cfg(feature = "log")]
-        error!("DI")
+        debug!("DI");
+        #[cfg(feature = "std")]
+        panic!("DI at addr {:04X}", self.regs.pc);
     }
     fn hlt(&mut self, _mem: &mut [u8]) {
         #[cfg(feature = "log")]
-        error!("HLT")
+        error!("HLT");
+        //#[cfg(feature = "std")]
+        panic!("HLT at addr {:04X}", self.regs.pc);
     }
 }
 const INDEX: [(&str, fn(&mut CPU, &mut [u8])); 57] = [
@@ -669,11 +696,11 @@ const INDEX: [(&str, fn(&mut CPU, &mut [u8])); 57] = [
     ("00101111", CPU::cma),
     ("00111111", CPU::cmc),
     ("00110111", CPU::stc),
-    ("11000011", CPU::jmp),
+    ("1100N011", CPU::jmp),
     ("11CCC010", CPU::jccc),
-    ("11001101", CPU::call),
+    ("11NN1101", CPU::call),
     ("11CCC100", CPU::c_ccc),
-    ("11001001", CPU::ret),
+    ("110N1001", CPU::ret),
     ("11CCC000", CPU::r_ccc),
     ("11NNN111", CPU::rst),
     ("11101001", CPU::pchl),
