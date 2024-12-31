@@ -5,12 +5,6 @@ use core::{panic, fmt::LowerExp};
 use log::{debug, error, trace};
 use regs::Registers;
 
-#[macro_export]
-macro_rules! getLsb {
-    ($a:expr) => {
-        !($a - 1) & $a
-    };
-}
 pub struct CPU {
     pub instruction: u8,
     regs: Registers,
@@ -329,7 +323,6 @@ impl CPU {
     fn daa(&mut self, mem: &mut [u8]) {
         let mut acc = self.regs.a;
         let mut low_nib = (acc & 0x0F) as u8;
-        let mut set_aux = false;
         if low_nib > 9 || self.get_regs().f.get_aux(){
             low_nib += 6;
             self.regs.f.set_aux(low_nib > 0x0F);
@@ -633,7 +626,7 @@ const fn recursive(
         //debug!("kmask:{:03X}", kmask);
         lut[kmask as usize] = val;
     } else {
-        let xmask_lsb = getLsb!(xmask);
+        let xmask_lsb = !(xmask - 1) & xmask;
         let xmask_without_lsb = xmask & !xmask_lsb;
         recursive(lut, kmask, xmask_without_lsb, val);
         recursive(lut, kmask | xmask_lsb, xmask_without_lsb, val);
