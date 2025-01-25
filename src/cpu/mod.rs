@@ -4,7 +4,7 @@ use core::ops::{IndexMut, Index};
 #[cfg(feature = "log")]
 use log::{debug, error, trace};
 use regs::Registers;
-
+#[derive(Debug, Copy, Clone)]
 pub struct CPU {
     pub instruction: u8,
     regs: Registers,
