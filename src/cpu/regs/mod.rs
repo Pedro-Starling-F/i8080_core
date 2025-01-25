@@ -1,4 +1,6 @@
 pub mod flags;
+
+use core::ops::IndexMut;
 use flags::Flags;
 #[derive(Clone,Copy,Debug,Default)]
 pub struct Registers{
@@ -44,7 +46,7 @@ impl Registers{
             _=> {panic!()},
         }
     }
-    pub fn get_d(&mut self,i:u8,mem:&[u8])->(u8,u8){
+    pub fn get_d(&mut self,i:u8,mem:&mut dyn IndexMut<u16, Output=u8>)->(u8,u8){
         let reg = (i & 0x38) >> 3;
         (
             match reg{
@@ -54,14 +56,14 @@ impl Registers{
                 3 => self.e,
                 4 => self.h,
                 5 => self.l,
-                6 => mem[self.get_rp(0x20) as usize],
+                6 => mem[self.get_rp(0x20)],
                 7 => self.a,
                 _ =>  {panic!()}
             }
             ,reg
         )
     }
-    pub fn set_d(&mut self,i:u8,mem:&mut [u8],val:u8)->u8{
+    pub fn set_d(&mut self,i:u8,mem:&mut dyn IndexMut<u16, Output=u8>,val:u8)->u8{
         let reg = (i & 0x38) >> 3;
         match reg{
             0 => self.b = val,
@@ -70,13 +72,13 @@ impl Registers{
             3 => self.e = val,
             4 => self.h = val,
             5 => self.l = val,
-            6 => mem[self.get_rp(0x20) as usize] = val,
+            6 => mem[self.get_rp(0x20)] = val,
             7 => self.a = val,
             _ => {}
         };
         reg
     }
-    pub fn get_s(&mut self,i:u8,mem:&[u8])->(u8, u8){
+    pub fn get_s(&mut self,i:u8,mem:&mut dyn IndexMut<u16, Output=u8>)->(u8, u8){
         let reg = i & 7;
         (match i & 7{
             0 => self.b,
@@ -85,12 +87,12 @@ impl Registers{
             3 => self.e,
             4 => self.h,
             5 => self.l,
-            6 => mem[self.get_rp(0x20) as usize % 0x4000],
+            6 => mem[self.get_rp(0x20)],
             7 => self.a,
             _ =>  {panic!()}
         }, reg)
     }
-    pub fn set_s(&mut self,i:u8,mem:&mut [u8],val:u8){
+    pub fn set_s(&mut self,i:u8,mem:&mut dyn IndexMut<u16, Output=u8>,val:u8){
         match i & 7{
             0 => self.b = val,
             1 => self.c = val,
@@ -98,7 +100,7 @@ impl Registers{
             3 => self.e = val,
             4 => self.h = val,
             5 => self.l = val,
-            6 => mem[self.get_rp(0x20) as usize] = val,
+            6 => mem[self.get_rp(0x20)] = val,
             7 => self.a = val,
             _ => {}
         };

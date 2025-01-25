@@ -29,7 +29,7 @@ impl CPU {
         cpu
     }
     pub fn set_input_n(&mut self, n: u8, value: u8) {
-        self.input[n] = value;
+        self.input[n as usize] = value;
     }
     pub fn get_regs(&self) -> Registers {
         self.regs
@@ -51,7 +51,7 @@ impl CPU {
         //#[cfg(feature = "std")]
         //print!("PC: {:04X} ", self.regs.pc);
         self.instruction = mem[self.regs.pc];
-        let cyc = LUT[self.instruction](self, mem);
+        let cyc = LUT[self.instruction as usize](self, mem);
         #[cfg(feature = "log")]
         trace!("{:X?}, {:X?}\n",self.instruction, self.regs);
         //#[cfg(feature = "std")]
@@ -136,7 +136,8 @@ impl CPU {
         5
     }
     fn mvi(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
-        let reg_idx = self.regs.set_d(self.instruction, mem, mem[self.regs.pc + 1]);
+        let v = mem[self.regs.pc + 1];
+        let reg_idx = self.regs.set_d(self.instruction, mem, v);
         self.regs.pc += 2;
         #[cfg(feature = "log")]
         debug!("MVI {:02X}", mem[self.regs.pc + 1]);
@@ -610,7 +611,7 @@ impl CPU {
     }
     fn r#in(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
         let addr = mem[self.regs.pc+1];
-        let acc = self.input[addr];
+        let acc = self.input[addr as usize];
         self.regs.set_s(7, mem, acc);
         self.regs.pc +=2;
         #[cfg(feature = "log")]
@@ -649,6 +650,7 @@ impl CPU {
     fn hlt(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
         #[cfg(feature = "log")]
         error!("HLT");
+        unreachable!();
         //#[cfg(feature = "std")]
         //panic!("HLT at addr {:04X}", self.regs.pc);
     }
@@ -712,12 +714,12 @@ const INDEX: [(&str, fn(&mut CPU, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8); 
     ("01110110", CPU::hlt),
     ("00NNN000", CPU::nop),
 ];
-const LUT: [fn(&mut CPU, &mut [u8])->u8; 0x100] = index();
+const LUT: [fn(&mut CPU, mem:&mut dyn IndexMut<u16, Output=u8>)->u8; 0x100] = index();
 const fn recursive(
-    lut: &mut [fn(&mut CPU, &mut [u8])->u8; 0x100],
+    lut: &mut [fn(&mut CPU, mem:&mut dyn IndexMut<u16, Output=u8>)->u8; 0x100],
     kmask: u8,
     xmask: u8,
-    val: fn(&mut CPU, &mut [u8])->u8,
+    val: fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8,
 ) {
     if xmask == 0 {
         //debug!("kmask:{:03X}", kmask);
@@ -729,7 +731,7 @@ const fn recursive(
         recursive(lut, kmask | xmask_lsb, xmask_without_lsb, val);
     }
 }
-const fn place(lut: &mut [fn(&mut CPU, &mut [u8])->u8; 0x100], s: &str, v: fn(&mut CPU, &mut [u8])->u8) {
+const fn place(lut: &mut [fn(&mut CPU, mem:&mut dyn IndexMut<u16, Output=u8>)->u8; 0x100], s: &str, v: fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8) {
     let mut xmask: u8 = 0;
     let mut kmask: u8 = 0;
     let mut i = 0;
@@ -742,16 +744,17 @@ const fn place(lut: &mut [fn(&mut CPU, &mut [u8])->u8; 0x100], s: &str, v: fn(&m
             'N' | 'D' | 'R' | 'P' | 'S' | 'C' => xmask |= 1 << (7 - i),
             _ => {}
         }
+        i = i + 1;
     }
     recursive(lut, kmask, xmask, v);
 }
 
-const fn index() -> [fn(&mut CPU, &mut [u8])->u8; 0x100] {
+const fn index() -> [fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8; 256] {
     let mut lut: [fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8;256] = [CPU::fault; 0x100];
     let mut i = 0;
     while i < INDEX.len() {
         place(&mut lut, INDEX[i].0, INDEX[i].1);
         i = i + 1;
     }
-    return lut;
+    lut
 }
