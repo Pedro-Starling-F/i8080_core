@@ -9,8 +9,7 @@ edition = "2021"
 log = {version = "0.4.25", default-features = false, optional = true}
 
 [features]
-default = ["std"]
-std = []
+default = []
 log = [
     "dep:log"
 ]

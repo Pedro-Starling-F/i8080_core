@@ -44,34 +44,41 @@ impl Registers{
             _=> {panic!()},
         }
     }
-    pub fn get_d(&mut self,i:u8,mem:&[u8])->u8{
-        match (i & 0x38) >> 3{
-            0 => self.b,
-            1 => self.c,
-            2 => self.d,
-            3 => self.e,
-            4 => self.h,
-            5 => self.l,
-            6 => mem[self.get_rp(0x20) as usize],
-            7 => self.a,
-            _ =>  {panic!()}
-        }
+    pub fn get_d(&mut self,i:u8,mem:&[u8])->(u8,u8){
+        let reg = (i & 0x38) >> 3;
+        (
+            match reg{
+                0 => self.b,
+                1 => self.c,
+                2 => self.d,
+                3 => self.e,
+                4 => self.h,
+                5 => self.l,
+                6 => mem[self.get_rp(0x20) as usize],
+                7 => self.a,
+                _ =>  {panic!()}
+            }
+            ,reg
+        )
     }
-    pub fn set_d(&mut self,i:u8,mem:&mut [u8],val:u8){
-        match (i & 0x38) >> 3{
+    pub fn set_d(&mut self,i:u8,mem:&mut [u8],val:u8)->u8{
+        let reg = (i & 0x38) >> 3;
+        match reg{
             0 => self.b = val,
             1 => self.c = val,
             2 => self.d = val,
             3 => self.e = val,
             4 => self.h = val,
             5 => self.l = val,
-            6 => mem[self.get_rp(0x20) as usize % 0x4000] = val,
+            6 => mem[self.get_rp(0x20) as usize] = val,
             7 => self.a = val,
             _ => {}
         };
+        reg
     }
-    pub fn get_s(&mut self,i:u8,mem:&[u8])->u8{
-        match i & 7{
+    pub fn get_s(&mut self,i:u8,mem:&[u8])->(u8, u8){
+        let reg = i & 7;
+        (match i & 7{
             0 => self.b,
             1 => self.c,
             2 => self.d,
@@ -81,7 +88,7 @@ impl Registers{
             6 => mem[self.get_rp(0x20) as usize % 0x4000],
             7 => self.a,
             _ =>  {panic!()}
-        }
+        }, reg)
     }
     pub fn set_s(&mut self,i:u8,mem:&mut [u8],val:u8){
         match i & 7{
