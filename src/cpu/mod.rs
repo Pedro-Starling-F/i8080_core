@@ -21,8 +21,11 @@ impl CPU {
             out_strobe:(false, 0, 0),
             interrupt_enabled:false
         };
-        cpu.regs.pc = start_pc;
-        cpu.regs.sp = start_sp;
+        #[cfg(feature = "start_regs")]
+        {
+            cpu.regs.pc = start_pc;
+            cpu.regs.sp = start_sp;
+        }
         cpu
     }
     pub fn set_input_n(&mut self, n: u8, value: u8) {
