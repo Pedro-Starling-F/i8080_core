@@ -13,7 +13,7 @@ pub struct CPU {
     pub interrupt_enabled:bool,
 }
 impl CPU {
-    pub fn new(start_pc: u16, start_sp: u16) -> CPU {
+    pub fn new(start_pc: Option<u16>, start_sp: Option<u16>) -> CPU {
         let mut cpu = CPU {
             instruction: 0,
             regs: Registers::default(),
@@ -23,8 +23,12 @@ impl CPU {
         };
         #[cfg(feature = "start_regs")]
         {
-            cpu.regs.pc = start_pc;
-            cpu.regs.sp = start_sp;
+            if let Some(pc) = start_pc{
+                cpu.regs.pc = pc;
+            };
+            if let Some(sp) = start_sp{
+                cpu.regs.sp = sp;
+            }
         }
         cpu
     }
