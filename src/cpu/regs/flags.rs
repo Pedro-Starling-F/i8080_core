@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 pub struct Flags(u8);
 impl Flags {
     pub fn set(&mut self,s:u8){
@@ -46,5 +46,10 @@ impl Flags {
     }
     pub fn get_carry(&self) -> bool{
         self.gets(0)
+    }
+}
+impl Default for Flags {
+    fn default() -> Self {
+        Flags(2)
     }
 }
