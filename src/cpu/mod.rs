@@ -7,7 +7,7 @@ use regs::Registers;
 #[derive(Debug, Copy, Clone)]
 pub struct CPU {
     pub instruction: u8,
-    regs: Registers,
+    pub regs: Registers,
     input: [u8; 0x100],
     pub out_strobe:(bool, u8, u8),
     pub interrupt_enabled:bool,
@@ -762,3 +762,4 @@ const fn index() -> [fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8; 256]
     }
     lut
 }
+
