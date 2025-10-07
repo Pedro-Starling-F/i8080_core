@@ -398,6 +398,7 @@ impl CPU {
             acc = a
         }
         self.regs.set_s(7, mem, acc);
+        self.regs.pc += 1;
         #[cfg(feature = "log")]
         error!("DAA");
         //panic!("DAA at addr {:02X}", self.regs.pc);
@@ -763,4 +764,5 @@ const fn index() -> [fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8; 256]
     }
     lut
 }
+
 
