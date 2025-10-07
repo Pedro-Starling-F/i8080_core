@@ -110,8 +110,9 @@ impl CPU {
         7
     }
     fn call(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
-        mem[self.regs.sp - 1] = (self.regs.pc >> 8) as u8;
-        mem[self.regs.sp - 2] = self.regs.pc as u8;
+        let pc = self.regs.pc.wrapping_add(3);
+        mem[self.regs.sp - 1] = (pc >> 8) as u8;
+        mem[self.regs.sp - 2] = pc as u8;
         self.regs.sp -= 2;
         let addr = self.get_16(mem);
         self.regs.pc = addr;
@@ -553,7 +554,7 @@ impl CPU {
     }
     pub fn ret(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
         let addr = self.pop_16(mem);
-        self.regs.pc = addr + 3;
+        self.regs.pc = addr;
         #[cfg(feature = "log")]
         debug!("RET {:04X}", addr);
         10
