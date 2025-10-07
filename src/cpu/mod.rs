@@ -564,7 +564,7 @@ impl CPU {
         let mut addr = 0;
         if self.regs.cond(self.instruction) {
             addr = self.pop_16(mem);
-            self.regs.pc = addr + 3;
+            self.regs.pc = addr;
             #[cfg(feature = "log")]
             debug!("Rccc {:04X}", addr);
             return 11
@@ -764,5 +764,6 @@ const fn index() -> [fn(&mut CPU, &mut dyn IndexMut<u16, Output=u8>) -> u8; 256]
     }
     lut
 }
+
 
 
