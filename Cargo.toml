@@ -13,4 +13,5 @@ default = []
 log = [
     "dep:log"
 ]
+std = []
 start_regs = []

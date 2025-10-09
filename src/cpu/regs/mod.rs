@@ -109,7 +109,7 @@ impl Registers{
         self.f.set_aux(h);
         self.f.set_carry(c);
         self.f.set_zero(r == 0);
-        self.f.set_parity(r.count_ones() & 1 == 0);
+        self.f.set_parity((r.count_ones() & 1) == 0);
         self.f.set_sign(r & 0x80 == 0x80);
     }
     pub fn cond(&mut self,i:u8)->bool{

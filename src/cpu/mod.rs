@@ -1,3 +1,5 @@
+#[cfg(feature = "std")]
+use std::*;
 pub mod regs;
 use core::{panic, fmt::LowerExp};
 use core::ops::{IndexMut, Index};
@@ -8,6 +10,7 @@ use regs::Registers;
 pub struct CPU {
     pub instruction: u8,
     pub regs: Registers,
+    cyc:u32,
     input: [u8; 0x100],
     pub out_strobe:(bool, u8, u8),
     pub interrupt_enabled:bool,
@@ -17,6 +20,7 @@ impl CPU {
         let mut cpu = CPU {
             instruction: 0,
             regs: Registers::default(),
+            cyc: 0,
             input: [0x00; 0x100],
             out_strobe:(false, 0, 0),
             interrupt_enabled:false
@@ -52,6 +56,15 @@ impl CPU {
     pub fn next(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
         #[cfg(feature = "log")]
         debug!("PC: {:04X} ", self.regs.pc);
+        #[cfg(feature = "std")]{
+            print!("PC: {:04X}, ", self.regs.pc);
+            print!("AF: {:04X}, ", (self.regs.a as u16) << 8 | self.regs.f.get() as u16);
+            print!("BC: {:04X}, ", (self.regs.b as u16) << 8 | self.regs.c as u16);
+            print!("DE: {:04X}, ", (self.regs.d as u16) << 8 | self.regs.e as u16);
+            print!("HL: {:04X}, ", (self.regs.h as u16) << 8 | self.regs.l as u16);
+            print!("SP: {:04X}, ", self.regs.sp);
+            print!("CYC: {:04X} \n", self.cyc as u32);
+        }
         //#[cfg(feature = "std")]
         //print!("PC: {:04X} ", self.regs.pc);
         self.instruction = mem[self.regs.pc];
@@ -60,6 +73,7 @@ impl CPU {
         trace!("{:X?}, {:X?}\n",self.instruction, self.regs);
         //#[cfg(feature = "std")]
         //print!("{:X?}\n", self.regs);
+        self.cyc += cyc as u32;
         cyc
     }
     fn jmp(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
@@ -471,7 +485,7 @@ impl CPU {
     }
     fn cpi(&mut self, mem:&mut dyn IndexMut<u16, Output=u8>) ->u8{
         let s = mem[self.regs.pc + 1];
-        let h = (self.regs.a & 0xF).wrapping_sub(s) & 0x10 == 0x10;
+        let h = (self.regs.a & 0xF).wrapping_sub(s) & 0x10 != 0x10;
         let (a, v) = self.regs.a.overflowing_sub(s);
         self.regs.set_flags(a, v, h);
         self.regs.pc += 2;
