@@ -427,8 +427,9 @@ impl CPU {
     }
     fn ana(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
+        let h = (self.regs.a | s) & 0x08 != 0;
         self.regs.a &= s;
-        self.regs.set_flags(self.regs.a, false, false);
+        self.regs.set_flags(self.regs.a, false, h);
         self.regs.pc += 1;
         #[cfg(feature = "log")]
         debug!("ANA {:02X}", s);
