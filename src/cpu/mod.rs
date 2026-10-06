@@ -360,7 +360,8 @@ impl CPU {
         let i = r.wrapping_add(1);
         let h = ((r & 0xF) + 1) & 0x10 == 0x10;
         self.regs.set_d(self.instruction, mem, i);
-        self.regs.set_flags(i, false, h);
+        let c = self.regs.f.get_carry();
+        self.regs.set_flags(i, c, h);
         self.regs.pc += 1;
         #[cfg(feature = "log")]
         debug!("INR {:02X}", r);
@@ -372,9 +373,10 @@ impl CPU {
     fn dcr(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (r, idx_src) = self.regs.get_d(self.instruction, mem);
         let i = r.wrapping_sub(1);
-        let h = ((r & 0xF).wrapping_sub(1)) & 0x10 == 0x10;
+        let h = (r & 0xF) != 0;
         self.regs.set_d(self.instruction, mem, i);
-        self.regs.set_flags(i, false, h);
+        let c = self.regs.f.get_carry();
+        self.regs.set_flags(i, c, h);
         self.regs.pc += 1;
         #[cfg(feature = "log")]
         debug!("DCR {:02X}", i);
