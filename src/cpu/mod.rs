@@ -106,8 +106,9 @@ impl CPU {
     }
     fn ani(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let db = mem[self.regs.pc + 1];
+        let h = (self.regs.a | db) & 0x08 != 0;
         self.regs.a &= db;
-        self.regs.set_flags(self.regs.a, false, false);
+        self.regs.set_flags(self.regs.a, false, h);
         self.regs.pc += 2;
         #[cfg(feature = "log")]
         debug!("ANI {:02X}", db);
