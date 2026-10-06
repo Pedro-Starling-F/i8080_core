@@ -33,7 +33,7 @@ impl Registers {
             0b11 => {
                 if instr == 0xF5 || instr == 0xF1 {
                     self.a = (val >> 8) as u8;
-                    self.f.set(val as u8);
+                    self.f.set((val as u8 & 0xD7) | 0x02);
                 } else {
                     self.sp = val;
                 }
