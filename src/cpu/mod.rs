@@ -10,7 +10,7 @@ use regs::Registers;
 pub struct CPU {
     pub instruction: u8,
     pub regs: Registers,
-    cyc: u32,
+    cyc: u64,
     input: [u8; 0x100],
     pub out_strobe: (bool, u8, u8),
     pub interrupt_enabled: bool,
@@ -76,7 +76,7 @@ impl CPU {
                 (self.regs.h as u16) << 8 | self.regs.l as u16
             );
             print!("SP: {:04X}, ", self.regs.sp);
-            print!("CYC: {:04X} \n", self.cyc as u32);
+            print!("CYC: {:016X} \n", self.cyc as u64);
         }
         //#[cfg(feature = "std")]
         //print!("PC: {:04X} ", self.regs.pc);
@@ -86,7 +86,7 @@ impl CPU {
         trace!("{:X?}, {:X?}\n", self.instruction, self.regs);
         //#[cfg(feature = "std")]
         //print!("{:X?}\n", self.regs);
-        self.cyc += cyc as u32;
+        self.cyc += cyc as u64;
         cyc
     }
     fn jmp(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
