@@ -86,7 +86,7 @@ impl CPU {
         trace!("{:X?}, {:X?}\n", self.instruction, self.regs);
         //#[cfg(feature = "std")]
         //print!("{:X?}\n", self.regs);
-        self.cyc += cyc as u64;
+        self.cyc = self.cyc.wrapping_add(cyc as u64);
         cyc
     }
     fn jmp(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -416,7 +416,7 @@ impl CPU {
         if low_nib > 9 || self.get_regs().f.get_aux() {
             low_nib += 6;
             self.regs.f.set_aux(low_nib > 0x0F);
-            acc += 6;
+            acc = acc.wrapping_add(6);
         }
         let mut up_nib = acc & 0xF0;
         if up_nib > 0x90 || self.get_regs().f.get_carry() {
