@@ -413,24 +413,24 @@ impl CPU {
         10
     }
     fn daa(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let mut acc = self.regs.a;
-        let mut low_nib = (acc & 0x0F) as u8;
-        if low_nib > 9 || self.get_regs().f.get_aux() {
-            low_nib += 6;
-            self.regs.f.set_aux(low_nib > 0x0F);
-            acc = acc.wrapping_add(6);
+        let a = self.regs.a;
+        let mut correction = 0u8;
+        let mut carry = self.regs.f.get_carry();
+        if (a & 0x0F) > 9 || self.regs.f.get_aux() {
+            correction |= 0x06;
         }
-        let mut up_nib = acc & 0xF0;
-        if up_nib > 0x90 || self.get_regs().f.get_carry() {
-            let (a, v) = acc.overflowing_add(0x60);
-            self.regs.f.set_carry(v);
-            acc = a
+        if a > 0x99 || carry {
+            correction |= 0x60;
+            carry = true;
         }
-        self.regs.set_s(7, mem, acc);
+        let result = a.wrapping_add(correction);
+        // AC is the carry out of bit 3 of the addition
+        let aux = ((a & 0x0F) + (correction & 0x0F)) > 0x0F;
+        self.regs.a = result;
+        self.regs.set_flags(result, carry, aux);
         self.regs.pc += 1;
         #[cfg(feature = "log")]
-        error!("DAA");
-        //panic!("DAA at addr {:02X}", self.regs.pc);
+        debug!("DAA {:02X}", result);
         4
     }
     fn ana(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
