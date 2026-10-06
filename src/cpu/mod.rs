@@ -298,7 +298,7 @@ impl CPU {
     fn sub(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
         let (a, v) = self.regs.a.overflowing_sub(s);
-        let h = (self.regs.a & 0xF).wrapping_sub(s & 0xF) & 0x10 == 0x10;
+        let h = (self.regs.a & 0xF) >= (s & 0xF);
         self.regs.set_flags(a, v, h);
         self.regs.a = a;
         self.regs.pc += 1;
@@ -312,7 +312,7 @@ impl CPU {
     fn sui(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let s = mem[self.regs.pc + 1];
         let (a, v) = self.regs.a.overflowing_sub(s);
-        let h = ((self.regs.a & 0xF) + (s & 0xF)) & 0x10 == 0x10;
+        let h = (self.regs.a & 0xF) >= (s & 0xF);
         self.regs.a = a;
         self.regs.set_flags(self.regs.a, v, h);
         self.regs.pc += 2;
@@ -324,11 +324,7 @@ impl CPU {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
         let (a0, v0) = self.regs.a.overflowing_sub(s);
         let (a1, v1) = a0.overflowing_sub(self.regs.f.get_carry() as u8);
-        let h = (self.regs.a & 0xF)
-            .wrapping_sub(s & 0xF)
-            .wrapping_sub(self.regs.f.get_carry() as u8)
-            & 0x10
-            == 0x10;
+        let h = (self.regs.a & 0xF) >= (s & 0xF) + self.regs.f.get_carry() as u8;
         self.regs.a = a1;
         self.regs.set_flags(self.regs.a, v0 | v1, h);
         self.regs.pc += 1;
@@ -343,11 +339,7 @@ impl CPU {
         let s = mem[self.regs.pc + 1];
         let (a0, v0) = self.regs.a.overflowing_sub(s);
         let (a1, v1) = a0.overflowing_sub(self.regs.f.get_carry() as u8);
-        let h = (self.regs.a & 0xF)
-            .wrapping_sub(s & 0xF)
-            .wrapping_sub(self.regs.f.get_carry() as u8)
-            & 0x10
-            == 0x10;
+        let h = (self.regs.a & 0xF) >= (s & 0xF) + self.regs.f.get_carry() as u8;
         self.regs.a = a1;
         self.regs.set_flags(self.regs.a, v0 | v1, h);
         self.regs.pc += 2;
@@ -487,7 +479,7 @@ impl CPU {
     }
     fn cmp(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
-        let h = (self.regs.a & 0xF).wrapping_sub(s) & 0x10 == 0x10;
+        let h = (self.regs.a & 0xF) >= (s & 0xF);
         let (a, v) = self.regs.a.overflowing_sub(s);
         self.regs.set_flags(a, v, h);
         self.regs.pc += 1;
@@ -500,7 +492,7 @@ impl CPU {
     }
     fn cpi(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let s = mem[self.regs.pc + 1];
-        let h = (self.regs.a & 0xF).wrapping_sub(s) & 0x10 != 0x10;
+        let h = (self.regs.a & 0xF) >= (s & 0xF);
         let (a, v) = self.regs.a.overflowing_sub(s);
         self.regs.set_flags(a, v, h);
         self.regs.pc += 2;
