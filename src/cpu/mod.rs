@@ -43,8 +43,8 @@ impl CPU {
         self.regs
     }
     fn get_16(&self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u16 {
-        let lb = mem[self.regs.pc + 1];
-        let hb = mem[self.regs.pc + 2];
+        let lb = mem[self.regs.pc.wrapping_add(1)];
+        let hb = mem[self.regs.pc.wrapping_add(2)];
         (hb as u16) << 8 | lb as u16
     }
     fn pop_16(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u16 {
@@ -99,17 +99,17 @@ impl CPU {
     fn lxi(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let val = self.get_16(mem);
         self.regs.set_rp(val, self.instruction);
-        self.regs.pc += 3;
+        self.regs.pc = self.regs.pc.wrapping_add(3);
         #[cfg(feature = "log")]
         debug!("LXI {:04X}", val);
         10
     }
     fn ani(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let db = mem[self.regs.pc + 1];
+        let db = mem[self.regs.pc.wrapping_add(1)];
         let h = (self.regs.a | db) & 0x08 != 0;
         self.regs.a &= db;
         self.regs.set_flags(self.regs.a, false, h);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
         debug!("ANI {:02X}", db);
         7
@@ -120,19 +120,19 @@ impl CPU {
             addr = self.get_16(mem);
             self.regs.pc = addr;
         } else {
-            self.regs.pc += 3;
+            self.regs.pc = self.regs.pc.wrapping_add(3);
         }
         #[cfg(feature = "log")]
         debug!("Jccc {:04X}", addr);
         10
     }
     fn adi(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let db = mem[self.regs.pc + 1];
+        let db = mem[self.regs.pc.wrapping_add(1)];
         let (a, v) = self.regs.a.overflowing_add(db);
         let h = ((self.regs.a & 0xF) + (db & 0xF)) & 0x10 == 0x10;
         self.regs.a = a;
         self.regs.set_flags(self.regs.a, v, h);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
         debug!("ADI {:02X}", db);
         7
@@ -163,24 +163,24 @@ impl CPU {
         let de = self.regs.get_rp(0x10);
         self.regs.set_rp(hl, 0x10);
         self.regs.set_rp(de, 0x20);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("XCHG {:04X}", de);
         5
     }
     fn mvi(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let v = mem[self.regs.pc + 1];
+        let v = mem[self.regs.pc.wrapping_add(1)];
         let reg_idx = self.regs.set_d(self.instruction, mem, v);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("MVI {:02X}", mem[self.regs.pc + 1]);
+        debug!("MVI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         if reg_idx == 6 {
             return 10;
         };
         7
     }
     fn nop(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("NOP {:04X}", self.regs.pc);
         4
@@ -196,7 +196,7 @@ impl CPU {
     fn mov(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
         let idx_dst = self.regs.set_d(self.instruction, mem, s);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("MOV {:02X}", s);
         if idx_src == 6 || idx_dst == 6 {
@@ -207,7 +207,7 @@ impl CPU {
     fn lda(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let addr = self.get_16(mem);
         self.regs.a = mem[addr];
-        self.regs.pc += 3;
+        self.regs.pc = self.regs.pc.wrapping_add(3);
         #[cfg(feature = "log")]
         debug!("LDA {:04X}", addr);
         13
@@ -215,7 +215,7 @@ impl CPU {
     fn sda(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let addr = self.get_16(mem);
         mem[addr] = self.regs.a;
-        self.regs.pc += 3;
+        self.regs.pc = self.regs.pc.wrapping_add(3);
         #[cfg(feature = "log")]
         debug!("SDA {:04X}", addr);
         13
@@ -224,7 +224,7 @@ impl CPU {
         let addr = self.get_16(mem);
         let val = (mem[addr + 1] as u16) << 8 | mem[addr] as u16;
         self.regs.set_rp(val, 0x20);
-        self.regs.pc += 3;
+        self.regs.pc = self.regs.pc.wrapping_add(3);
         #[cfg(feature = "log")]
         debug!("LHLD {:04X}", val);
         16
@@ -234,7 +234,7 @@ impl CPU {
         let val = self.regs.get_rp(0x20);
         mem[addr] = val as u8;
         mem[addr + 1] = (val >> 8) as u8;
-        self.regs.pc += 3;
+        self.regs.pc = self.regs.pc.wrapping_add(3);
         #[cfg(feature = "log")]
         debug!("SHLD {:04X}", val);
         16
@@ -242,7 +242,7 @@ impl CPU {
     fn ldax(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let rp = self.regs.get_rp(self.instruction);
         self.regs.a = mem[rp];
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("LDAX {:04X}", rp);
         7
@@ -250,7 +250,7 @@ impl CPU {
     fn stax(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let rp = self.regs.get_rp(self.instruction);
         mem[rp] = self.regs.a;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("STAX {:04X}", rp);
         7
@@ -261,7 +261,7 @@ impl CPU {
         let h = ((self.regs.a & 0xF) + (s & 0xF)) & 0x10 == 0x10;
         self.regs.set_flags(a, v, h);
         self.regs.a = a;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("ADD {:02X}", s);
         if idx_src == 6 {
@@ -276,24 +276,24 @@ impl CPU {
         let h = ((self.regs.a & 0xF) + (s & 0xF) + self.regs.f.get_carry() as u8) & 0x10 == 0x10;
         self.regs.a = a1;
         self.regs.set_flags(self.regs.a, v0 | v1, h);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
-        debug!("ADC {:02X}", mem[self.regs.pc + 1]);
+        debug!("ADC {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         if idx_src == 6 {
             return 7;
         };
         4
     }
     fn aci(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let s = mem[self.regs.pc + 1];
+        let s = mem[self.regs.pc.wrapping_add(1)];
         let (a0, v0) = self.regs.a.overflowing_add(s);
         let (a1, v1) = a0.overflowing_add(self.regs.f.get_carry() as u8);
         let h = ((self.regs.a & 0xF) + (s & 0xF) + self.regs.f.get_carry() as u8) & 0x10 == 0x10;
         self.regs.a = a1;
         self.regs.set_flags(self.regs.a, v0 | v1, h);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("ACI {:02X}", mem[self.regs.pc + 1]);
+        debug!("ACI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         7
     }
     fn sub(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -302,7 +302,7 @@ impl CPU {
         let h = (self.regs.a & 0xF) >= (s & 0xF);
         self.regs.set_flags(a, v, h);
         self.regs.a = a;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("SUB {:02X}", s);
         if idx_src == 6 {
@@ -311,14 +311,14 @@ impl CPU {
         4
     }
     fn sui(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let s = mem[self.regs.pc + 1];
+        let s = mem[self.regs.pc.wrapping_add(1)];
         let (a, v) = self.regs.a.overflowing_sub(s);
         let h = (self.regs.a & 0xF) >= (s & 0xF);
         self.regs.a = a;
         self.regs.set_flags(self.regs.a, v, h);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("SUI {:02X}", mem[self.regs.pc + 1]);
+        debug!("SUI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         7
     }
     fn sbb(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -328,24 +328,24 @@ impl CPU {
         let h = (self.regs.a & 0xF) >= (s & 0xF) + self.regs.f.get_carry() as u8;
         self.regs.a = a1;
         self.regs.set_flags(self.regs.a, v0 | v1, h);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
-        debug!("SBB {:02X}", mem[self.regs.pc + 1]);
+        debug!("SBB {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         if idx_src == 6 {
             return 7;
         };
         4
     }
     fn sbi(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let s = mem[self.regs.pc + 1];
+        let s = mem[self.regs.pc.wrapping_add(1)];
         let (a0, v0) = self.regs.a.overflowing_sub(s);
         let (a1, v1) = a0.overflowing_sub(self.regs.f.get_carry() as u8);
         let h = (self.regs.a & 0xF) >= (s & 0xF) + self.regs.f.get_carry() as u8;
         self.regs.a = a1;
         self.regs.set_flags(self.regs.a, v0 | v1, h);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("SBI {:02X}", mem[self.regs.pc + 1]);
+        debug!("SBI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         7
     }
     fn inr(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -355,7 +355,7 @@ impl CPU {
         self.regs.set_d(self.instruction, mem, i);
         let c = self.regs.f.get_carry();
         self.regs.set_flags(i, c, h);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("INR {:02X}", r);
         if idx_src == 6 {
@@ -370,7 +370,7 @@ impl CPU {
         self.regs.set_d(self.instruction, mem, i);
         let c = self.regs.f.get_carry();
         self.regs.set_flags(i, c, h);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("DCR {:02X}", i);
         if idx_src == 6 {
@@ -381,7 +381,7 @@ impl CPU {
     fn inx(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let rp = self.regs.get_rp(self.instruction);
         self.regs.set_rp(rp.wrapping_add(1), self.instruction);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("INX {:02x}", rp);
         5
@@ -389,7 +389,7 @@ impl CPU {
     fn dcx(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let rp = self.regs.get_rp(self.instruction);
         self.regs.set_rp(rp.wrapping_sub(1), self.instruction);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("DCX {:02x}", rp);
         5
@@ -400,7 +400,7 @@ impl CPU {
         let (hl, v) = hl.overflowing_add(rp);
         self.regs.set_rp(hl, 0x20);
         self.regs.f.set_carry(v);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("DAD {:04x}", hl);
         10
@@ -421,7 +421,7 @@ impl CPU {
         let aux = ((a & 0x0F) + (correction & 0x0F)) > 0x0F;
         self.regs.a = result;
         self.regs.set_flags(result, carry, aux);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("DAA {:02X}", result);
         4
@@ -431,7 +431,7 @@ impl CPU {
         let h = (self.regs.a | s) & 0x08 != 0;
         self.regs.a &= s;
         self.regs.set_flags(self.regs.a, false, h);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("ANA {:02X}", s);
         if idx_src == 6 {
@@ -443,7 +443,7 @@ impl CPU {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
         self.regs.a |= s;
         self.regs.set_flags(self.regs.a, false, false);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("ORA {:02X}", s);
         if idx_src == 6 {
@@ -452,18 +452,18 @@ impl CPU {
         4
     }
     fn ori(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        self.regs.a |= mem[self.regs.pc + 1];
+        self.regs.a |= mem[self.regs.pc.wrapping_add(1)];
         self.regs.set_flags(self.regs.a, false, false);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("ORI {:02X}", mem[self.regs.pc + 1]);
+        debug!("ORI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         7
     }
     fn xra(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (s, idx_src) = self.regs.get_s(self.instruction, mem);
         self.regs.a ^= s;
         self.regs.set_flags(self.regs.a, false, false);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("XRA {:02X}", s);
         if idx_src == 6 {
@@ -472,11 +472,11 @@ impl CPU {
         4
     }
     fn xri(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        self.regs.a ^= mem[self.regs.pc + 1];
+        self.regs.a ^= mem[self.regs.pc.wrapping_add(1)];
         self.regs.set_flags(self.regs.a, false, false);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("XRI {:02X}", mem[self.regs.pc + 1]);
+        debug!("XRI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         7
     }
     fn cmp(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -484,29 +484,29 @@ impl CPU {
         let h = (self.regs.a & 0xF) >= (s & 0xF);
         let (a, v) = self.regs.a.overflowing_sub(s);
         self.regs.set_flags(a, v, h);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
-        debug!("CMP {:02X}", mem[self.regs.pc + 1]);
+        debug!("CMP {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         if idx_src == 6 {
             return 7;
         };
         4
     }
     fn cpi(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let s = mem[self.regs.pc + 1];
+        let s = mem[self.regs.pc.wrapping_add(1)];
         let h = (self.regs.a & 0xF) >= (s & 0xF);
         let (a, v) = self.regs.a.overflowing_sub(s);
         self.regs.set_flags(a, v, h);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
-        debug!("CPI {:02X}", mem[self.regs.pc + 1]);
+        debug!("CPI {:02X}", mem[self.regs.pc.wrapping_add(1)]);
         7
     }
     fn rlc(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let (a, c) = self.regs.a.overflowing_mul(2);
         self.regs.a = a + c as u8;
         self.regs.f.set_carry(c);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("RLC {:02x}", a);
         4
@@ -515,7 +515,7 @@ impl CPU {
         let a = self.regs.a.rotate_right(1);
         self.regs.a = a;
         self.regs.f.set_carry(a & 0x80 == 0x80);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("RRC {:02x}", a);
         4
@@ -524,7 +524,7 @@ impl CPU {
         let (a, c) = self.regs.a.overflowing_mul(2);
         self.regs.a = a + self.regs.f.get_carry() as u8;
         self.regs.f.set_carry(c);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("RAL {:02x}", a);
         4
@@ -535,14 +535,14 @@ impl CPU {
         let a = (self.regs.a >> 1) | ((c as u8) << 7);
         self.regs.a = a;
         self.regs.a = a as u8;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("RAL {:02x}", a);
         4
     }
     fn cma(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         self.regs.a = !self.regs.a;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("CMA {:02x}", self.regs.a);
         4
@@ -550,14 +550,14 @@ impl CPU {
     fn cmc(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let c = !self.regs.f.get_carry();
         self.regs.f.set_carry(c);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("CMC {}", self.regs.f.get_carry());
         4
     }
     fn stc(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         self.regs.f.set_carry(true);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("STC");
         4
@@ -574,7 +574,7 @@ impl CPU {
             debug!("Cccc {:04X}", addr);
             return 17;
         }
-        self.regs.pc += 3;
+        self.regs.pc = self.regs.pc.wrapping_add(3);
         11
     }
     pub fn ret(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -593,7 +593,7 @@ impl CPU {
             debug!("Rccc {:04X}", addr);
             return 11;
         }
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         5
     }
     pub fn rst(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
@@ -615,7 +615,7 @@ impl CPU {
     fn pop(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let val = self.pop_16(mem);
         self.regs.set_rp(val, self.instruction);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("POP {:04x}", val);
         10
@@ -634,43 +634,43 @@ impl CPU {
     }
     fn sphl(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         self.regs.sp = self.regs.get_rp(0x20);
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("SPHL {:04x}", self.regs.get_rp(0x20));
         5
     }
     fn r#in(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        let addr = mem[self.regs.pc + 1];
+        let addr = mem[self.regs.pc.wrapping_add(1)];
         let acc = self.input[addr as usize];
         self.regs.set_s(7, mem, acc);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
         error!("IN {:02X}", acc);
-        //#[cfg(feature = "std")]
-        //panic!("IN at addr {:02X}", addr);
+        #[cfg(feature = "std")]
+        panic!("IN at addr {:02X}", addr);
         10
     }
     fn out(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let acc = self.regs.a;
-        let addr = mem[self.regs.pc + 1];
+        let addr = mem[self.regs.pc.wrapping_add(1)];
         self.out_strobe = (true, addr, acc);
-        self.regs.pc += 2;
+        self.regs.pc = self.regs.pc.wrapping_add(2);
         #[cfg(feature = "log")]
         debug!("OUT {:02X}", acc);
         10
     }
     fn ei(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         self.interrupt_enabled = true;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("EI");
-        //#[cfg(feature = "std")]
-        //panic!("EI at addr {:04X}", self.regs.pc);
+        #[cfg(feature = "std")]
+        panic!("EI at addr {:04X}", self.regs.pc);
         4
     }
     fn di(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         self.interrupt_enabled = false;
-        self.regs.pc += 1;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("DI");
         //#[cfg(feature = "std")]
