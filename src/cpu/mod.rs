@@ -530,8 +530,10 @@ impl CPU {
         4
     }
     fn rar(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
+        let c = self.regs.f.get_carry();
         self.regs.f.set_carry(self.regs.a & 1 == 1);
-        let a = (self.regs.a as i8) >> 1;
+        let a = (self.regs.a >> 1) | ((c as u8) << 7);
+        self.regs.a = a;
         self.regs.a = a as u8;
         self.regs.pc += 1;
         #[cfg(feature = "log")]
