@@ -141,7 +141,7 @@ impl CPU {
         let pc = self.regs.pc.wrapping_add(3);
         mem[self.regs.sp.wrapping_sub(1)] = (pc >> 8) as u8;
         mem[self.regs.sp.wrapping_sub(2)] = pc as u8;
-        self.regs.sp -= 2;
+        self.regs.sp = self.regs.sp.wrapping_sub(2);
         let addr = self.get_16(mem);
         self.regs.pc = addr;
         #[cfg(feature = "log")]
@@ -152,8 +152,8 @@ impl CPU {
         let rp = self.regs.get_rp(self.instruction);
         mem[self.regs.sp.wrapping_sub(1)] = (rp >> 8) as u8;
         mem[self.regs.sp.wrapping_sub(2)] = rp as u8;
-        self.regs.sp -= 2;
-        self.regs.pc += 1;
+        self.regs.sp = self.regs.sp.wrapping_sub(2);
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("PUSH {:04X}", rp);
         11
@@ -567,7 +567,7 @@ impl CPU {
             let pc = self.regs.pc.wrapping_add(3);
             mem[self.regs.sp.wrapping_sub(1)] = (pc >> 8) as u8;
             mem[self.regs.sp.wrapping_sub(2)] = pc as u8;
-            self.regs.sp -= 2;
+            self.regs.sp = self.regs.sp.wrapping_sub(2);
             let addr = self.get_16(mem);
             self.regs.pc = addr;
             #[cfg(feature = "log")]
@@ -624,10 +624,10 @@ impl CPU {
         let l = self.regs.l;
         let h = self.regs.h;
         self.regs.l = mem[self.regs.sp];
-        self.regs.h = mem[self.regs.sp + 1];
+        self.regs.h = mem[self.regs.sp.wrapping_add(1)];
         mem[self.regs.sp] = l;
-        mem[self.regs.sp + 1] = h;
-        self.regs.pc += 1;
+        mem[self.regs.sp.wrapping_add(1)] = h;
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         #[cfg(feature = "log")]
         debug!("XTHL {:04x}", self.regs.get_rp(0x20));
         18
