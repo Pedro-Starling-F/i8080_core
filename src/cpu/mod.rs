@@ -50,7 +50,7 @@ impl CPU {
     fn pop_16(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u16 {
         let lb = mem[self.regs.sp];
         let hb = mem[self.regs.sp + 1];
-        self.regs.sp += 2;
+        self.regs.sp = self.regs.sp.wrapping_add(2);
         (hb as u16) << 8 | lb as u16
     }
     pub fn next(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
