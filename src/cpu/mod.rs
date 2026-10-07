@@ -49,7 +49,7 @@ impl CPU {
     }
     fn pop_16(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u16 {
         let lb = mem[self.regs.sp];
-        let hb = mem[self.regs.sp + 1];
+        let hb = mem[self.regs.sp.wrapping_add(1)];
         self.regs.sp = self.regs.sp.wrapping_add(2);
         (hb as u16) << 8 | lb as u16
     }
@@ -139,8 +139,8 @@ impl CPU {
     }
     fn call(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let pc = self.regs.pc.wrapping_add(3);
-        mem[self.regs.sp - 1] = (pc >> 8) as u8;
-        mem[self.regs.sp - 2] = pc as u8;
+        mem[self.regs.sp.wrapping_sub(1)] = (pc >> 8) as u8;
+        mem[self.regs.sp.wrapping_sub(2)] = pc as u8;
         self.regs.sp -= 2;
         let addr = self.get_16(mem);
         self.regs.pc = addr;
@@ -150,8 +150,8 @@ impl CPU {
     }
     fn push(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         let rp = self.regs.get_rp(self.instruction);
-        mem[self.regs.sp - 1] = (rp >> 8) as u8;
-        mem[self.regs.sp - 2] = rp as u8;
+        mem[self.regs.sp.wrapping_sub(1)] = (rp >> 8) as u8;
+        mem[self.regs.sp.wrapping_sub(2)] = rp as u8;
         self.regs.sp -= 2;
         self.regs.pc += 1;
         #[cfg(feature = "log")]
@@ -565,8 +565,8 @@ impl CPU {
     fn c_ccc(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
         if self.regs.cond(self.instruction) {
             let pc = self.regs.pc.wrapping_add(3);
-            mem[self.regs.sp - 1] = (pc >> 8) as u8;
-            mem[self.regs.sp - 2] = pc as u8;
+            mem[self.regs.sp.wrapping_sub(1)] = (pc >> 8) as u8;
+            mem[self.regs.sp.wrapping_sub(2)] = pc as u8;
             self.regs.sp -= 2;
             let addr = self.get_16(mem);
             self.regs.pc = addr;
@@ -597,9 +597,9 @@ impl CPU {
         5
     }
     pub fn rst(&mut self, mem: &mut dyn IndexMut<u16, Output = u8>) -> u8 {
-        mem[self.regs.sp - 1] = (self.regs.pc >> 8) as u8;
-        mem[self.regs.sp - 2] = self.regs.pc as u8;
-        self.regs.sp -= 2;
+        mem[self.regs.sp.wrapping_sub(1)] = (self.regs.pc >> 8) as u8;
+        mem[self.regs.sp.wrapping_sub(2)] = self.regs.pc as u8;
+        self.regs.sp = self.regs.sp.wrapping_sub(2);
         let addr = self.instruction & 0b00111000;
         self.regs.pc = addr as u16;
         #[cfg(feature = "log")]
